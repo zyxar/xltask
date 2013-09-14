@@ -213,6 +213,8 @@ func (this *Agent) Download(taskid string, fc Fetcher, echo bool) error {
 	default:
 		if task.DownloadStatus != "2" {
 			return taskNotCompletedErr
+		} else if task.expired() {
+			return errors.New("Task expired.")
 		}
 		err = this.download_(task.LixianURL, task.TaskName, fc, echo)
 	}
@@ -284,6 +286,9 @@ func (this *Agent) tasklist_nofresh(tid, page int, show bool) error {
 		ts := resp.Info.Tasks
 		for i, _ := range ts {
 			this.vm[t_normal][ts[i].Id] = &ts[i]
+			if ts[i].expired() {
+				this.vm[t_expired][ts[i].Id] = &ts[i]
+			}
 		}
 	}
 	if show {
@@ -422,13 +427,12 @@ func (this *Agent) InfoTasks(ids []string) {
 		if task == nil {
 			continue
 		}
+		fmt.Printf("%s\n", task.Repr())
 		if task.TaskType == _Task_BT {
 			_, err := this.FillBtList(task.Id)
 			if err != nil {
 				fmt.Println(err)
 			}
-		} else {
-			fmt.Printf("%s\n", task.Repr())
 		}
 	}
 }
@@ -438,8 +442,11 @@ func (this *Agent) FillBtList(taskid string) (*_bt_list, error) {
 	if task == nil {
 		return nil, noSuchTaskErr
 	}
+	if task.expired() {
+		return nil, errors.New("Task expired.")
+	}
 	if task.TaskType != _Task_BT {
-		return nil, fmt.Errorf("Not bt task.")
+		return nil, errors.New("Not bt task.")
 	}
 	uri := fmt.Sprintf(FILLBTLIST_URL, task.Id, task.Cid, this.id, "task", current_timestamp())
 	log.Println("==>", uri)

@@ -18,20 +18,21 @@ var stats []string
 var coloring []string
 
 func init() {
-	stats = make([]string, 6)
+	stats = make([]string, 16)
 	stats[0] = "waiting"
 	stats[1] = "downloading"
 	stats[2] = "completed"
 	stats[3] = "failed"
 	stats[5] = "pending"
-	coloring = make([]string, 7)
+	stats[6] = "expired" // 2 + 4
+	coloring = make([]string, 16)
 	coloring[0] = color_front_yellow
 	coloring[1] = color_front_magenta
 	coloring[2] = color_front_green
 	coloring[3] = color_front_red
-	coloring[4] = color_front_blue
-	coloring[5] = color_front_cyan
-	coloring[6] = color_reset
+	coloring[6] = color_front_cyan
+	coloring[5] = color_front_blue
+	coloring[4] = color_reset
 }
 
 func readBody(resp *http.Response) ([]byte, error) {
@@ -101,12 +102,20 @@ func md5sum(raw interface{}) []byte {
 
 func (this _task) String() string {
 	j, _ := strconv.Atoi(this.DownloadStatus)
+	k, _ := strconv.Atoi(this.Flag)
+	j += k
 	status := stats[j]
 	return fmt.Sprintf("%s%s %s %s %s %d%% %s%s", coloring[j], this.Id, this.TaskName, status, this.FileSize, this.Progress, trim(this.LeftLiveTime), color_reset)
 }
 
+func (this _task) expired() bool {
+	return this.Flag == "4"
+}
+
 func (this _task) Repr() string {
 	j, _ := strconv.Atoi(this.DownloadStatus)
+	k, _ := strconv.Atoi(this.Flag)
+	j += k
 	status := stats[j]
 	ret := coloring[j] + this.Id + " " + this.TaskName + " " + status + " " + this.FileSize + " " + trim(this.LeftLiveTime) + "\n"
 	if this.Cid != "" {

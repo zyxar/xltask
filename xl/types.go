@@ -16,8 +16,8 @@ type _info struct {
 }
 
 type _task struct {
-	Id string `json:"id"`
-	// Flag                string `json:"flag"`
+	Id   string `json:"id"`
+	Flag string `json:"flag"`
 	// Database            string `json:"database"`
 	// ClassValue          string `json:"class_value"`
 	GlobalId       string `json:"global_id"`
