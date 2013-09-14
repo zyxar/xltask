@@ -321,7 +321,6 @@ func (this *Agent) ShowExpiredTasks(show bool) error {
 	if show {
 		printTaskList(this.vm[t_expired])
 	}
-	fmt.Printf("%s\n", ts)
 	return err
 }
 
@@ -436,7 +435,7 @@ func (this *Agent) InfoTasks(ids []string) {
 
 func (this *Agent) FillBtList(taskid string) (*_bt_list, error) {
 	task := this.getTaskById(taskid)
-	if !AssertTaskId(taskid) || task == nil {
+	if task == nil {
 		return nil, noSuchTaskErr
 	}
 	if task.TaskType != _Task_BT {
@@ -463,6 +462,11 @@ func (this *Agent) FillBtList(taskid string) (*_bt_list, error) {
 	exp := regexp.MustCompile(`fill_bt_list\({"Result":(.*)}\)`)
 	s := exp.FindSubmatch(r)
 	if s == nil {
+		exp = regexp.MustCompile(`alert\('(.*)'\);.*`)
+		s = exp.FindSubmatch(r)
+		if s != nil {
+			return nil, errors.New(string(s[1]))
+		}
 		return nil, invalidResponseErr
 	}
 	var bt_list _bt_list
@@ -709,8 +713,14 @@ func (this *Agent) PauseTasks(ids []string) error {
 }
 
 func (this *Agent) getTaskById(taskid string) *_task {
-	// TODO: merge all types
-	return this.vm[t_normal][taskid]
+	task := this.vm[t_normal][taskid]
+	if task == nil {
+		task = this.vm[t_expired][taskid]
+	}
+	if task == nil {
+		task = this.vm[t_deleted][taskid]
+	}
+	return task
 }
 
 func (this *Agent) RenameTask(taskid, newname string) error {
