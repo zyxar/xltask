@@ -9,6 +9,7 @@ import (
 	"github.com/zyxar/xltask/xl"
 	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -37,7 +38,7 @@ func main() {
 	agent := xl.NewAgent()
 	if !agent.On {
 		if id == "" {
-			co, err := ioutil.ReadFile("config.json")
+			co, err := ioutil.ReadFile(path.Join(xl.XLTASK_HOME, "config.json"))
 			if err != nil {
 				flag.Usage()
 				return

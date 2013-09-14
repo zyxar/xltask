@@ -2,7 +2,6 @@ package xl
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/ssh/terminal"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,12 +28,17 @@ type Agent struct {
 	id       string
 	gdriveid string
 	vm       []map[string]*_task
+	passrd   PassReader
 	sync.Mutex
 }
 
 type Account struct {
 	id string
 	pw string
+}
+
+type PassReader interface {
+	ReadPassword() (string, error)
 }
 
 var timestamp int
@@ -64,15 +68,22 @@ func init() {
 	cookieFile = path.Join(XLTASK_HOME, "cookie.json")
 }
 
-func (this *Agent) SetPass() error {
-	fmt.Print("Password: ")
-	v, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+func (this *Agent) SetPass() {
+	if this.passrd == nil {
+		this.passrd = DefaultPassReader
+	}
+	v, err := this.passrd.ReadPassword()
 	if err != nil {
-		return err
+		log.Fatalf("Set password failed: %s\n", err)
 	}
 	fmt.Println()
-	this.account.pw = string(v)
-	return nil
+	this.account.pw = v
+}
+
+func (this *Agent) UsePassReader(p PassReader) {
+	if p != nil {
+		this.passrd = p
+	}
 }
 
 func NewAgent() *Agent {
@@ -125,7 +136,9 @@ func (this *Agent) Login(id string) error {
 				break
 			}
 		}
-		this.SetPass()
+		if this.account.pw == "" {
+			this.SetPass()
+		}
 		v := url.Values{}
 		v.Set("u", this.account.id)
 		v.Set("p", hashPass(this.account.pw, vcode))
