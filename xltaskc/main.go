@@ -1,12 +1,12 @@
 package main
 
 import (
-	"../xl"
 	"bufio"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/zyxar/xltask/xl"
 	"io/ioutil"
 	"os"
 	"regexp"

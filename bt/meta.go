@@ -2,12 +2,11 @@ package bt
 
 import (
 	"bytes"
+	"code.google.com/p/bencode-go"
 	"crypto/sha1"
 	"errors"
 	"io"
 	"os"
-
-	bencode "code.google.com/p/bencode-go"
 )
 
 type FileDict struct {

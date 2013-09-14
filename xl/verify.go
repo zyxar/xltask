@@ -1,10 +1,9 @@
 package xl
 
 import (
-	// "../bt"
-	"../ed2k"
 	"bufio"
 	"fmt"
+	"github.com/zyxar/xltask/ed2k"
 	"os"
 	"strings"
 )

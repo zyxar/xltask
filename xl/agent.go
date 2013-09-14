@@ -1,13 +1,13 @@
 package xl
 
 import (
-	"../bt"
-	"../cookiejar"
 	"bytes"
 	"code.google.com/p/go.crypto/ssh/terminal"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zyxar/xltask/bt"
+	"github.com/zyxar/xltask/cookiejar"
 	"io"
 	"io/ioutil"
 	"log"
