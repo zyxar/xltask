@@ -14,17 +14,6 @@ import (
 	"strings"
 )
 
-var id string
-
-type config struct {
-	Account string `json:"account"`
-}
-
-func init() {
-	flag.StringVar(&id, "login", "", "login account")
-	flag.StringVar(&id, "l", "", "login account")
-}
-
 func clearscr() {
 	fmt.Printf("%c[2J%c[0;0H", 27, 27)
 }
@@ -34,7 +23,11 @@ func prompt() {
 }
 
 func main() {
-	flag.Parse()
+	initConf()
+	if printVer {
+		printVersion()
+		return
+	}
 	agent := xl.NewAgent()
 	if !agent.On {
 		if id == "" {
@@ -168,6 +161,8 @@ func main() {
 				}
 			case "link":
 				// get lixian_URL of a task
+			case "version":
+				printVersion()
 			case "quit":
 				fallthrough
 			case "exit":
