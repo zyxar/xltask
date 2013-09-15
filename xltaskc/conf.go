@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version = "0.1a"
+	version = "0.1b"
 )
 
 var id string
