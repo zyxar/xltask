@@ -22,7 +22,7 @@ import (
 )
 
 type Agent struct {
-	account  *Account
+	conf     Config
 	conn     *http.Client
 	On       bool
 	id       string
@@ -32,13 +32,15 @@ type Agent struct {
 	sync.Mutex
 }
 
-type Account struct {
-	id string
-	pw string
-}
-
 type PassReader interface {
 	ReadPassword() (string, error)
+}
+
+type Config interface {
+	GetId() string
+	GetPass() string
+	SetPass(string) error
+	Boost() bool
 }
 
 var timestamp int
@@ -77,7 +79,7 @@ func (this *Agent) SetPass() {
 		log.Fatalf("Set password failed: %s\n", err)
 	}
 	fmt.Println()
-	this.account.pw = v
+	this.conf.SetPass(v)
 }
 
 func (this *Agent) UsePassReader(p PassReader) {
@@ -86,42 +88,44 @@ func (this *Agent) UsePassReader(p PassReader) {
 	}
 }
 
-func NewAgent() *Agent {
+func NewAgent(c Config) *Agent {
 	cookie, _ := cookiejar.New(nil)
 	this := new(Agent)
+	this.conf = c
 	this.conn = &http.Client{nil, nil, cookie}
-	this.account = new(Account)
 	this.On = false
 	this.vm = make([]map[string]*_task, t_total)
 	this.vm[t_normal] = make(map[string]*_task)  // normal
 	this.vm[t_expired] = make(map[string]*_task) // expired
 	this.vm[t_deleted] = make(map[string]*_task) // deleted
-	this.init()
+	if c.Boost() {
+		this.init()
+	}
 	return this
 }
 
 func (this *Agent) init() {
-	if this.Login("") != nil {
+	if this.Login() != nil {
 		return
 	}
 	this.tasklist_nofresh(4, 1, false)
 }
 
-func (this *Agent) Login(id string) error {
+func (this *Agent) Login() error {
 	this.Lock()
 	defer this.Unlock()
 	var vcode string
 	this.conn.Jar.(*cookiejar.Jar).Load(cookieFile)
 	if !this.IsOn() {
-		if id == "" {
+		var id string
+		var err error
+		if id = this.conf.GetId(); id == "" {
 			return invalidLoginErr
 		}
-		this.account.id = id
-		loginUrl := fmt.Sprintf("http://login.xunlei.com/check?u=%s&cachetime=%d", this.account.id, current_timestamp())
+		loginUrl := fmt.Sprintf("http://login.xunlei.com/check?u=%s&cachetime=%d", id, current_timestamp())
 		u, _ := url.Parse("http://xunlei.com/")
 	loop:
-		_, err := this.get(loginUrl)
-		if err != nil {
+		if _, err = this.get(loginUrl); err != nil {
 			return err
 		}
 		cks := this.conn.Jar.Cookies(u)
@@ -136,15 +140,14 @@ func (this *Agent) Login(id string) error {
 				break
 			}
 		}
-		if this.account.pw == "" {
+		if this.conf.GetPass() == "" {
 			this.SetPass()
 		}
 		v := url.Values{}
-		v.Set("u", this.account.id)
-		v.Set("p", hashPass(this.account.pw, vcode))
+		v.Set("u", id)
+		v.Set("p", hashPass(this.conf.GetPass(), vcode))
 		v.Set("verifycode", vcode)
-		_, err = this.post("http://login.xunlei.com/sec2login/", v.Encode())
-		if err != nil {
+		if _, err = this.post("http://login.xunlei.com/sec2login/", v.Encode()); err != nil {
 			return err
 		}
 		cks = this.conn.Jar.Cookies(u)
@@ -158,9 +161,7 @@ func (this *Agent) Login(id string) error {
 		if len(this.id) == 0 {
 			return loginFailedErr
 		}
-
-		r, err := this.get(fmt.Sprintf("%slogin?cachetime=%d&from=0", DOMAIN_LIXIAN, current_timestamp()))
-		if len(r) < 512 {
+		if r, err := this.get(fmt.Sprintf("%slogin?cachetime=%d&from=0", DOMAIN_LIXIAN, current_timestamp())); err != nil || len(r) < 512 {
 			return unexpectedErr
 		}
 		this.conn.Jar.(*cookiejar.Jar).Save(cookieFile)

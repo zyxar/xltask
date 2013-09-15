@@ -74,17 +74,25 @@ func current_random() string {
 
 func hashPass(pass, vcode string) string {
 	h := md5.New()
-	v := pass
-	io.WriteString(h, v)
-	v = string(fmt.Sprintf("%x", h.Sum(nil)))
-	h.Reset()
-	io.WriteString(h, v)
-	v = string(fmt.Sprintf("%x", h.Sum(nil)))
-	h.Reset()
+	v := EncryptPass(pass)
 	io.WriteString(h, v)
 	io.WriteString(h, vcode)
-	v = string(fmt.Sprintf("%x", h.Sum(nil)))
-	return v
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func EncryptPass(pass string) string {
+	if len(pass) == 32 {
+		if ok, _ := regexp.MatchString(`[a-f0-9]{32,32}`, pass); ok {
+			return pass
+		}
+	}
+	h := md5.New()
+	v := pass
+	io.WriteString(h, v)
+	v = fmt.Sprintf("%x", h.Sum(nil))
+	h.Reset()
+	io.WriteString(h, v)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func md5sum(raw interface{}) []byte {
@@ -95,7 +103,7 @@ func md5sum(raw interface{}) []byte {
 	case string:
 		io.WriteString(h, raw.(string))
 	default:
-		return nil
+		io.WriteString(h, fmt.Sprintf("%s", raw))
 	}
 	return h.Sum(nil)
 }

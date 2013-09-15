@@ -2,14 +2,11 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/zyxar/xltask/xl"
-	"io/ioutil"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 )
@@ -28,19 +25,23 @@ func main() {
 		printVersion()
 		return
 	}
-	agent := xl.NewAgent()
+	agent := xl.NewAgent(conf)
+	var err error
 	if !agent.On {
-		if id == "" {
-			co, err := ioutil.ReadFile(path.Join(xl.XLTASK_HOME, "config.json"))
-			if err != nil {
+		if conf.Account == "" {
+			err = conf.load()
+			if err != nil || conf.Account == "" {
 				flag.Usage()
 				return
 			}
-			var v config
-			json.Unmarshal(co, &v)
-			id = v.Account
 		}
-		agent.Login(id)
+		if err = agent.Login(); err != nil {
+			fmt.Println(err)
+			return
+		}
+		conf.Password = xl.EncryptPass(conf.Password)
+		fmt.Println(conf.Password)
+		fmt.Println(conf.save())
 	}
 	{
 		insufficientArgErr := errors.New("Insufficient arguments.")
