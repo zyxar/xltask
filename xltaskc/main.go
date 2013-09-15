@@ -103,7 +103,7 @@ func main() {
 				if len(cmds) >= 2 {
 					j := 1
 					for j < len(cmds) {
-						if err = agent.AddTask(cmds[1]); err != nil {
+						if err = agent.AddTask(cmds[j]); err != nil {
 							fmt.Println(err)
 						}
 						j++
@@ -126,7 +126,7 @@ func main() {
 				if len(cmds) >= 2 {
 					j := 1
 					for j < len(cmds) {
-						if err = agent.PurgeTask(cmds[1]); err != nil {
+						if err = agent.PurgeTask(cmds[j]); err != nil {
 							fmt.Println(err)
 						}
 						j++
