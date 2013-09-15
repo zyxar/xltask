@@ -164,6 +164,8 @@ func main() {
 				// get lixian_URL of a task
 			case "version":
 				printVersion()
+			case "update":
+				err = agent.ProcessTask()
 			case "quit":
 				fallthrough
 			case "exit":

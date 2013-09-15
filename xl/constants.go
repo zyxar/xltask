@@ -70,6 +70,7 @@ const (
 	URLQUERY_URL        = INTERFACE_URL + "/url_query?callback=queryUrl&u=%s&random=%s"
 	DELAYONCE_URL       = INTERFACE_URL + "/delay_once?callback=anything"
 	RENAME_URL          = INTERFACE_URL + "/rename?"
+	TASKPROCESS_URL     = INTERFACE_URL + "/task_process?callback=jsonp%d&t=%d"
 	TASKDELETE_URL      = INTERFACE_URL + "/task_delete?callback=jsonp%d&type=%d&noCacheIE=%d"
 	SHOWTASK_UNFRESH    = INTERFACE_URL + "/showtask_unfresh?type_id=%d&page=%d&tasknum=%s&p=%d&interfrom=task"
 )

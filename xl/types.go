@@ -174,3 +174,25 @@ type _bt_qtask struct {
 	Random string
 	Ret    string
 }
+
+type _ptask_record struct {
+	Id             string  `json:"tid"`
+	URL            string  `json:"url"`
+	Speed          string  `json:"speed"`
+	Progress       float32 `json:"fpercent"` // diff between 'percent' and 'fpercent'?
+	LeaveTime      string  `json:"leave_time"`
+	Size           string  `json:"fsize"`
+	DownloadStatus string  `json:"download_status"`
+	LixianURL      string  `json:"lixian_url"`
+	LeftLiveTime   string  `json:"left_live_time"`
+	TaskType       string  `json:"tasktype"`
+	FileSize       string  `json:"filesize"`
+}
+
+type _ptask_resp struct {
+	List []_ptask_record `json:"Record"`
+	Info struct {
+		DownNum string `json:"downloading_num"`
+		WaitNum string `json:"waiting_num"`
+	} `json:"Task"`
+}

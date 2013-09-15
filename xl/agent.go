@@ -691,6 +691,51 @@ func (this *Agent) getReferer() string {
 	return fmt.Sprintf(TASK_BASE, this.id)
 }
 
+func (this *Agent) ProcessTask() error {
+	uri := fmt.Sprintf(TASKPROCESS_URL, current_timestamp(), current_timestamp())
+	v := url.Values{}
+	l := len(this.vm[t_normal])
+	list := make([]string, 0, l)
+	nm_list := make([]string, 0, l)
+	bt_list := make([]string, 0, l)
+	for i, _ := range this.vm[t_normal] {
+		if this.vm[t_normal][i].DownloadStatus == "1" {
+			list = append(list, i)
+			if this.vm[t_normal][i].TaskType == _Task_BT {
+				bt_list = append(bt_list, i)
+			} else {
+				nm_list = append(nm_list, i)
+			}
+		}
+	}
+	if len(list) == 0 {
+		return errors.New("Local task list empty.")
+	}
+	v.Add("list", strings.Join(list, ","))
+	v.Add("nm_list", strings.Join(nm_list, ","))
+	v.Add("bt_list", strings.Join(bt_list, ","))
+	v.Add("uid", this.id)
+	v.Add("interfrom", "task")
+	var r []byte
+	var err error
+	if r, err = this.post(uri, v.Encode()); err != nil {
+		return err
+	}
+	exp := regexp.MustCompile(`jsonp\d+\(\{"Process":(.*)\}\)`)
+	s := exp.FindSubmatch(r)
+	if s == nil {
+		return invalidResponseErr
+	}
+	var res _ptask_resp
+	json.Unmarshal(s[1], &res)
+	for i, _ := range res.List {
+		task := this.getTaskById(res.List[i].Id)
+		task.update(&res.List[i])
+		fmt.Printf("#%d %s\n", i, task)
+	}
+	return nil
+}
+
 func (this *Agent) GetTorrentByHash(hash, file string) {
 	uri := fmt.Sprintf(GETTORRENT_URL, this.id, strings.ToUpper(hash))
 	r, err := this.get(uri)

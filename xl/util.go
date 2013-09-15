@@ -139,6 +139,16 @@ func (this _task) Repr() string {
 	return ret + color_reset
 }
 
+func (this *_task) update(t *_ptask_record) {
+	if this.Id != t.Id {
+		return
+	}
+	this.Speed = t.Speed
+	this.Progress = t.Progress
+	this.DownloadStatus = t.DownloadStatus
+	this.LixianURL = t.LixianURL
+}
+
 func trim(raw string) string {
 	exp := regexp.MustCompile(`<font color='([a-z]*)'>(.*)</font>`)
 	s := exp.FindStringSubmatch(raw)
@@ -165,7 +175,7 @@ func (this _bt_list) String() string {
 	r := fmt.Sprintf("%s%s %s/%d%s\n", color_front_blue, this.InfoId, this.BtNum, this.BtPerNum, color_reset)
 	for i, _ := range this.Record {
 		j, _ := strconv.Atoi(this.Record[i].Status)
-		r += fmt.Sprintf("%s#%d %s %s %s%s\n", coloring[j], this.Record[i].Id, this.Record[i].FileName, this.Record[i].SizeReadable, stats[j], color_reset)
+		r += fmt.Sprintf("#%d %s%s %s %s%s\n", this.Record[i].Id, coloring[j], this.Record[i].FileName, this.Record[i].SizeReadable, stats[j], color_reset)
 	}
 	return r
 }
