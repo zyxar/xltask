@@ -112,8 +112,6 @@ func (this *Agent) init() {
 }
 
 func (this *Agent) Login() error {
-	this.Lock()
-	defer this.Unlock()
 	var vcode string
 	this.conn.Jar.(*cookiejar.Jar).Load(cookieFile)
 	if !this.IsOn() {
@@ -309,7 +307,9 @@ func (this *Agent) readExpired() ([]byte, error) {
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
 	req.AddCookie(&http.Cookie{Name: "lx_nf_all", Value: url.QueryEscape(_expired_ck)})
 	req.AddCookie(&http.Cookie{Name: "pagenum", Value: _page_size})
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +346,9 @@ func (this *Agent) readHistory(page int) ([]byte, error) {
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
 	req.AddCookie(&http.Cookie{Name: "lx_nf_all", Value: url.QueryEscape(_deleted_ck)})
 	req.AddCookie(&http.Cookie{Name: "pagenum", Value: _page_size})
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +459,9 @@ func (this *Agent) FillBtList(taskid string) (*_bt_list, error) {
 	req.Header.Add("User-Agent", user_agent)
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
 	req.AddCookie(&http.Cookie{Name: "pagenum", Value: _bt_page_size})
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -640,7 +644,9 @@ func (this *Agent) addTorrentTask(filename string) (err error) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Add("User-Agent", user_agent)
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return
 	}
@@ -970,7 +976,9 @@ func (this *Agent) get(dest string) ([]byte, error) {
 	}
 	req.Header.Add("User-Agent", user_agent)
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -987,7 +995,9 @@ func (this *Agent) post(dest string, data string) ([]byte, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("User-Agent", user_agent)
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
+	this.Lock()
 	resp, err := this.conn.Do(req)
+	this.Unlock()
 	if err != nil {
 		return nil, err
 	}
