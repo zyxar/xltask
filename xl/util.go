@@ -113,7 +113,7 @@ func (this _task) String() string {
 	k, _ := strconv.Atoi(this.Flag)
 	j += k
 	status := stats[j]
-	return fmt.Sprintf("%s%s %s %s %s %d%% %s%s", coloring[j], this.Id, this.TaskName, status, this.FileSize, this.Progress, trim(this.LeftLiveTime), color_reset)
+	return fmt.Sprintf("%s%s %s %s %s %.1f%% %s%s", coloring[j], this.Id, this.TaskName, status, this.FileSize, this.Progress, trim(this.LeftLiveTime), color_reset)
 }
 
 func (this _task) expired() bool {

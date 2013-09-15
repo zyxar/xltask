@@ -20,16 +20,16 @@ type _task struct {
 	Flag string `json:"flag"`
 	// Database            string `json:"database"`
 	// ClassValue          string `json:"class_value"`
-	GlobalId       string `json:"global_id"`
-	ResType        string `json:"restype"`
-	FileSize       string `json:"filesize"`
-	FileType       string `json:"filetype"`
-	Cid            string `json:"cid"`
-	GCid           string `json:"gcid"`
-	TaskName       string `json:"taskname"`
-	DownloadStatus string `json:"download_status"`
-	Speed          string `json:"speed"`
-	Progress       byte   `json:"progress"`
+	GlobalId       string  `json:"global_id"`
+	ResType        string  `json:"restype"`
+	FileSize       string  `json:"filesize"`
+	FileType       string  `json:"filetype"`
+	Cid            string  `json:"cid"`
+	GCid           string  `json:"gcid"`
+	TaskName       string  `json:"taskname"`
+	DownloadStatus string  `json:"download_status"`
+	Speed          string  `json:"speed"`
+	Progress       float32 `json:"progress"`
 	// UsedTime            string `json:"used_time"`
 	LeftLiveTime string `json:"left_live_time"`
 	LixianURL    string `json:"lixian_url"`
