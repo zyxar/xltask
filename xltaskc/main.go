@@ -97,8 +97,7 @@ func main() {
 				if len(cmds) >= 2 {
 					j := 1
 					for j < len(cmds) {
-						err = agent.Download(cmds[j], nil, true)
-						if err != nil {
+						if err = agent.Download(cmds[j], nil, true); err != nil {
 							fmt.Println(err)
 						}
 						j++
@@ -111,8 +110,7 @@ func main() {
 				if len(cmds) >= 2 {
 					j := 1
 					for j < len(cmds) {
-						err = agent.AddTask(cmds[1])
-						if err != nil {
+						if err = agent.AddTask(cmds[1]); err != nil {
 							fmt.Println(err)
 						}
 						j++
@@ -132,8 +130,15 @@ func main() {
 					err = insufficientArgErr
 				}
 			case "purge":
-				if len(cmds) == 2 {
-					err = agent.PurgeTask(cmds[1])
+				if len(cmds) >= 2 {
+					j := 1
+					for j < len(cmds) {
+						if err = agent.PurgeTask(cmds[1]); err != nil {
+							fmt.Println(err)
+						}
+						j++
+					}
+					err = nil
 				} else {
 					err = insufficientArgErr
 				}
