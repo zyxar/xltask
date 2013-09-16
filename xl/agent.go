@@ -248,6 +248,58 @@ func (this *Agent) download_bt(task *_task, fc Fetcher, echo bool) error {
 	return nil
 }
 
+func (this *Agent) Dispatch(pattern string, flag int) error {
+	if tasks, err := this.dispatch(`(?i)`+pattern, flag); err != nil {
+		return err
+	} else {
+		for i, _ := range tasks {
+			fmt.Printf("#%d %s\n", i+1, tasks[i])
+		}
+	}
+	return nil
+}
+
+func (this *Agent) dispatch(pattern string, flag int) ([]*_task, error) {
+	/*
+	   flag:
+	   	0, t_normal,
+	   	1, t_deleted
+	*/
+	if flag < 0 || flag >= t_total {
+		return nil, errors.New("Invalid task flag.")
+	}
+	expr, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, errors.New("Pattern unrecognised.")
+	}
+	var ret []*_task
+	switch flag {
+	case t_normal:
+		fallthrough
+	case t_deleted:
+		m := this.vm[flag]
+		ret = make([]*_task, 0, 32)
+		for i, _ := range m {
+			if expr.MatchString(m[i].TaskName) {
+				ret = append(ret, m[i])
+			}
+		}
+	default:
+		ret = make([]*_task, 0, 32)
+		for i, _ := range this.vm[t_normal] {
+			if expr.MatchString(this.vm[t_normal][i].TaskName) {
+				ret = append(ret, this.vm[t_normal][i])
+			}
+		}
+		for i, _ := range this.vm[t_deleted] {
+			if expr.MatchString(this.vm[t_deleted][i].TaskName) {
+				ret = append(ret, this.vm[t_deleted][i])
+			}
+		}
+	}
+	return ret, nil
+}
+
 func (this *Agent) ShowTasks() error {
 	return this.tasklist_nofresh(4, 1, true)
 }

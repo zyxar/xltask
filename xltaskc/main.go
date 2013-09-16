@@ -166,6 +166,12 @@ func main() {
 				}
 			case "link":
 				// get lixian_URL of a task
+			case "dispatch":
+				if len(cmds) == 2 {
+					err = agent.Dispatch(cmds[1], 2)
+				} else {
+					err = insufficientArgErr
+				}
 			case "version":
 				printVersion()
 			case "update":
