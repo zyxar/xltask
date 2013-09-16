@@ -49,7 +49,7 @@ func (c curl) Fetch(uri, gdriveid, filename string, echo bool) error {
 }
 
 func (a Aria2) Fetch(uri, gdriveid, filename string, echo bool) error {
-	cmd := exec.Command("aria2c", "--header=Cookie: gdriveid="+gdriveid, uri, "--out", filename, "--file-allocation=none", "-s5", "-x5", "-c", "--summary-interval=0")
+	cmd := exec.Command("aria2c", "--header=Cookie: gdriveid="+gdriveid, uri, "--out", filename, "--file-allocation=none", "-s5", "-x5", "-c", "--summary-interval=0", "--follow-torrent=false")
 	if echo {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
