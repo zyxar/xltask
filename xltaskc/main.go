@@ -27,7 +27,12 @@ func main() {
 	}
 	agent := xl.NewAgent(conf)
 	var err error
-	if !agent.On {
+	if err = agent.Login(); err == nil {
+		conf.Password = xl.EncryptPass(conf.Password)
+		conf.save()
+	} else if err == xl.ReuseSession {
+		fmt.Println(err)
+	} else {
 		if conf.Account == "" {
 			err = conf.load()
 			if err != nil || conf.Account == "" {
@@ -40,8 +45,7 @@ func main() {
 			return
 		}
 		conf.Password = xl.EncryptPass(conf.Password)
-		fmt.Println(conf.Password)
-		fmt.Println(conf.save())
+		conf.save()
 	}
 	{
 		insufficientArgErr := errors.New("Insufficient arguments.")

@@ -24,7 +24,6 @@ import (
 type Agent struct {
 	conf     Config
 	conn     *http.Client
-	On       bool
 	id       string
 	gdriveid string
 	vm       []map[string]*_task
@@ -53,6 +52,7 @@ var invalidLoginErr error
 var loginFailedErr error
 var renameTaskErr error
 var XLTASK_HOME string
+var ReuseSession error
 
 func init() {
 	noSuchTaskErr = errors.New("No such TaskId in list.")
@@ -62,6 +62,7 @@ func init() {
 	invalidLoginErr = errors.New("Invalid login account.")
 	loginFailedErr = errors.New("Login failed.")
 	renameTaskErr = errors.New("Rename task ends with error.")
+	ReuseSession = errors.New("Reuse previous session in success.")
 	initHome()
 	err := mkConfigDir()
 	if err != nil {
@@ -93,7 +94,6 @@ func NewAgent(c Config) *Agent {
 	this := new(Agent)
 	this.conf = c
 	this.conn = &http.Client{nil, nil, cookie}
-	this.On = false
 	this.vm = make([]map[string]*_task, t_total)
 	this.vm[t_normal] = make(map[string]*_task)  // normal
 	this.vm[t_expired] = make(map[string]*_task) // expired
@@ -165,7 +165,8 @@ func (this *Agent) Login() error {
 			return unexpectedErr
 		}
 		this.conn.Jar.(*cookiejar.Jar).Save(cookieFile)
-		this.On = true
+	} else {
+		return ReuseSession
 	}
 	return nil
 }
@@ -179,10 +180,8 @@ func (this *Agent) IsOn() bool {
 	r, _ := this.get(fmt.Sprintf("%suser_task?userid=%s&st=0", DOMAIN_LIXIAN, this.id))
 	if ok, _ := regexp.Match(`top.location='http://cloud.vip.xunlei.com/task.html\?error=`, r); ok {
 		log.Println("previous login timeout")
-		this.On = false
 		return false
 	}
-	this.On = true
 	return true
 }
 
