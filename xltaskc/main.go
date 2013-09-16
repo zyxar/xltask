@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/zyxar/xltask/xl"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -15,8 +13,9 @@ func clearscr() {
 	fmt.Printf("%c[2J%c[0;0H", 27, 27)
 }
 
-func prompt() {
-	fmt.Print("lixian >> ")
+type Term interface {
+	ReadLine() (string, error)
+	Restore()
 }
 
 func main() {
@@ -25,6 +24,8 @@ func main() {
 		printVersion()
 		return
 	}
+	term := newTerm()
+	defer term.Restore()
 	agent := xl.NewAgent(conf)
 	var err error
 	if err = agent.Login(); err == nil {
@@ -50,15 +51,13 @@ func main() {
 	{
 		insufficientArgErr := errors.New("Insufficient arguments.")
 		clearscr()
-		rd := bufio.NewReader(os.Stdin)
 		var err error
 		var line string
 		var cmds []string
 		exp := regexp.MustCompile(`\s+`)
 	LOOP:
 		for {
-			prompt()
-			line, err = rd.ReadString('\n')
+			line, err = term.ReadLine()
 			if err != nil {
 				break
 			}
