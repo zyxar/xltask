@@ -22,6 +22,12 @@ type Aria2 struct {
 type axel struct {
 }
 
+var DefaultFetcher Fetcher
+
+func init() {
+	DefaultFetcher = &Aria2{}
+}
+
 func (w wget) Fetch(uri, gdriveid, filename string, echo bool) error {
 	cmd := exec.Command("wget", "--header=Cookie: gdriveid="+gdriveid, uri, "-O", filename)
 	if echo {

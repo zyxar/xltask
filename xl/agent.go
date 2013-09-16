@@ -196,7 +196,7 @@ func (this *Agent) getCookie(uri, name string) string {
 
 func (this *Agent) Download(taskid string, fc Fetcher, echo bool) error {
 	if fc == nil {
-		fc = Aria2{}
+		fc = DefaultFetcher
 	}
 	task := this.vm[t_normal][taskid]
 	if !AssertTaskId(taskid) || task == nil {
