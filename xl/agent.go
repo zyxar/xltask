@@ -194,7 +194,7 @@ func (this *Agent) getCookie(uri, name string) string {
 	return ""
 }
 
-func (this *Agent) Download(taskid string, fc Fetcher, echo bool) error {
+func (this *Agent) Download(taskid string, filter string, fc Fetcher, echo bool) error {
 	if fc == nil {
 		fc = DefaultFetcher
 	}
@@ -205,7 +205,7 @@ func (this *Agent) Download(taskid string, fc Fetcher, echo bool) error {
 	var err error
 	switch task.TaskType {
 	case _Task_BT:
-		err = this.download_bt(task, fc, echo)
+		err = this.download_bt(task, filter, fc, echo)
 	case _Task_NONBT:
 		fallthrough
 	default:
@@ -214,6 +214,7 @@ func (this *Agent) Download(taskid string, fc Fetcher, echo bool) error {
 		} else if task.expired() {
 			return errors.New("Task expired.")
 		}
+		log.Println("Downloading", task.TaskName, "...")
 		err = this.download_(task.LixianURL, task.TaskName, fc, echo)
 	}
 	if err != nil {
@@ -229,34 +230,44 @@ func (this *Agent) download_(uri, filename string, fc Fetcher, echo bool) error 
 	return fc.Fetch(uri, this.gdriveid, filename, echo)
 }
 
-func (this *Agent) download_bt(task *_task, fc Fetcher, echo bool) error {
+func (this *Agent) download_bt(task *_task, filter string, fc Fetcher, echo bool) error {
 	btlist, err := this.FillBtList(task.Id)
 	if err != nil {
 		return err
 	}
 	rlist := btlist.Record
 	for i, _ := range rlist {
-		if rlist[i].Status == "2" {
+		// TODO: make filename safe
+		if ok, _ := regexp.MatchString(`(?i)`+filter, rlist[i].FileName); ok && rlist[i].Status == "2" {
+			log.Println("Downloading", rlist[i].FileName, "...")
 			err = this.download_(rlist[i].DownURL, path.Join(task.TaskName, rlist[i].FileName), fc, echo)
 			if err != nil {
 				return err
 			}
-		} else {
+		} else if ok {
 			log.Printf("%sSkip incompleted task %s.%s", color_front_cyan, rlist[i].FileName, color_reset)
+		} else {
+			log.Printf("%sSkip unselected task %s.%s", color_front_yellow, rlist[i].FileName, color_reset)
 		}
 	}
 	return nil
 }
 
-func (this *Agent) Dispatch(pattern string, flag int) error {
+func (this *Agent) Dispatch(pattern string, flag int) ([]string, error) {
+	if ok, _ := regexp.MatchString(`^\d{7,}$`, pattern); ok {
+		return []string{pattern}, nil
+	}
+	var ids []string
 	if tasks, err := this.dispatch(`(?i)`+pattern, flag); err != nil {
-		return err
+		return nil, err
 	} else {
+		ids = make([]string, 0, len(tasks))
 		for i, _ := range tasks {
+			ids = append(ids, tasks[i].Id)
 			fmt.Printf("#%d %s\n", i+1, tasks[i])
 		}
 	}
-	return nil
+	return ids, nil
 }
 
 func (this *Agent) dispatch(pattern string, flag int) ([]*_task, error) {

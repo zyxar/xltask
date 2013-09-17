@@ -4,8 +4,13 @@ package main
 
 import (
 	"code.google.com/p/go.crypto/ssh/terminal"
+	"fmt"
 	"os"
 )
+
+func clearscr() {
+	fmt.Printf("%c[2J%c[0;0H", 27, 27)
+}
 
 type uterm struct {
 	s *terminal.State

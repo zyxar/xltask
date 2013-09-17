@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+func clearscr() {
+}
+
 type wterm struct {
 	t *terminal.Terminal
 }

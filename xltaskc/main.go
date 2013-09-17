@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-func clearscr() {
-	fmt.Printf("%c[2J%c[0;0H", 27, 27)
-}
-
 type Term interface {
 	ReadLine() (string, error)
 	Restore()
@@ -91,17 +87,33 @@ func main() {
 			case "dl":
 				fallthrough
 			case "download":
-				if len(cmds) >= 2 {
-					j := 1
-					for j < len(cmds) {
-						if err = agent.Download(cmds[j], nil, true); err != nil {
-							fmt.Println(err)
-						}
-						j++
-					}
-					err = nil
-				} else {
+				if len(cmds) < 2 {
 					err = insufficientArgErr
+				} else {
+					tasks := make(map[string]string)
+					for i, _ := range cmds[1:] {
+						p := strings.Split(cmds[1:][i], "/")
+						var filter string
+						if len(p) == 1 {
+							filter = `.*`
+						} else {
+							filter = p[1]
+						}
+						ts, _ := agent.Dispatch(p[0], 0)
+						for j, _ := range ts {
+							tasks[ts[j]] = filter
+						}
+					}
+					if len(tasks) == 0 {
+						err = errors.New("No task matches.")
+					} else {
+						for i, _ := range tasks {
+							if err = agent.Download(i, tasks[i], nil, true); err != nil {
+								fmt.Println(err)
+							}
+						}
+						err = nil
+					}
 				}
 			case "add":
 				if len(cmds) >= 2 {
@@ -120,24 +132,41 @@ func main() {
 				fallthrough
 			case "delete":
 				if len(cmds) == 2 {
-					err = agent.DeleteTask(cmds[1])
+					if tasks, err := agent.Dispatch(cmds[1], 2); err == nil {
+						switch len(tasks) {
+						case 0:
+							err = errors.New("No task matches.")
+						case 1:
+							err = agent.DeleteTask(tasks[0])
+						default:
+							err = agent.DeleteTasks(tasks)
+						}
+					}
 				} else if len(cmds) > 2 {
 					err = agent.DeleteTasks(cmds[1:])
 				} else {
 					err = insufficientArgErr
 				}
 			case "purge":
-				if len(cmds) >= 2 {
-					j := 1
-					for j < len(cmds) {
-						if err = agent.PurgeTask(cmds[j]); err != nil {
-							fmt.Println(err)
-						}
-						j++
-					}
-					err = nil
-				} else {
+				if len(cmds) < 2 {
 					err = insufficientArgErr
+				} else {
+					var tasks []string
+					if len(cmds) == 2 {
+						tasks, err = agent.Dispatch(cmds[1], 2)
+					} else {
+						tasks = cmds[1:]
+					}
+					if len(tasks) == 0 {
+						err = errors.New("No task matches.")
+					} else {
+						for j, _ := range tasks {
+							if err = agent.PurgeTask(tasks[j]); err != nil {
+								fmt.Println(err)
+							}
+						}
+						err = nil
+					}
 				}
 			case "readd":
 				// re-add tasks from deleted or expired
@@ -167,7 +196,7 @@ func main() {
 				// get lixian_URL of a task
 			case "dispatch":
 				if len(cmds) == 2 {
-					err = agent.Dispatch(cmds[1], 2)
+					_, err = agent.Dispatch(cmds[1], 2)
 				} else {
 					err = insufficientArgErr
 				}
