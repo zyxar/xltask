@@ -477,28 +477,55 @@ func (this *Agent) DelayTask(taskid string) error {
 	return nil
 }
 
-func (this *Agent) InfoTasks(ids []string) {
-	for i, _ := range ids {
-		if !AssertTaskId(ids[i]) {
-			continue
-		}
-		task := this.vm[t_normal][ids[i]]
-		if task == nil {
-			task = this.vm[t_expired][ids[i]]
-		}
-		if task == nil {
-			task = this.vm[t_deleted][ids[i]]
-		}
-		if task == nil {
-			continue
-		}
-		fmt.Printf("%s\n", task.Repr())
-		if task.TaskType == _Task_BT {
-			_, err := this.FillBtList(task.Id)
-			if err != nil {
-				fmt.Println(err)
+func (this *Agent) InfoTasks(id interface{}) {
+	switch ids := id.(type) {
+	case []string:
+		for i, _ := range ids {
+			if !AssertTaskId(ids[i]) {
+				continue
+			}
+			task := this.vm[t_normal][ids[i]]
+			if task == nil {
+				task = this.vm[t_expired][ids[i]]
+			}
+			if task == nil {
+				task = this.vm[t_deleted][ids[i]]
+			}
+			if task == nil {
+				continue
+			}
+			fmt.Printf("%s\n", task.Repr())
+			if task.TaskType == _Task_BT {
+				_, err := this.FillBtList(task.Id)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
+	case map[string]string:
+		for i, _ := range ids {
+			if !AssertTaskId(ids[i]) {
+				continue
+			}
+			task := this.vm[t_normal][ids[i]]
+			if task == nil {
+				task = this.vm[t_expired][ids[i]]
+			}
+			if task == nil {
+				task = this.vm[t_deleted][ids[i]]
+			}
+			if task == nil {
+				continue
+			}
+			fmt.Printf("%s\n", task.Repr())
+			if task.TaskType == _Task_BT {
+				_, err := this.FillBtList(task.Id)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+	default:
 	}
 }
 
