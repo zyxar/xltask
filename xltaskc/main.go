@@ -46,6 +46,7 @@ func main() {
 	}
 	{
 		insufficientArgErr := errors.New("Insufficient arguments.")
+		noTasksMatchesErr := errors.New("No task matches.")
 		clearscr()
 		var err error
 		var line string
@@ -79,10 +80,23 @@ func main() {
 			case "ll":
 				fallthrough
 			case "info":
-				if len(cmds) >= 2 {
-					agent.InfoTasks(cmds[1:])
-				} else {
+				if len(cmds) < 2 {
 					err = insufficientArgErr
+				} else {
+					tasks := make(map[string]string)
+					for i, _ := range cmds[1:] {
+						if v, err := agent.Dispatch(cmds[1:][i], 2); err == nil {
+							for j, _ := range v {
+								tasks[v[j]] = v[j]
+							}
+						}
+					}
+					if len(tasks) == 0 {
+						err = noTasksMatchesErr
+					} else {
+						agent.InfoTasks(tasks)
+						err = nil
+					}
 				}
 			case "dl":
 				fallthrough
@@ -105,7 +119,7 @@ func main() {
 						}
 					}
 					if len(tasks) == 0 {
-						err = errors.New("No task matches.")
+						err = noTasksMatchesErr
 					} else {
 						for i, _ := range tasks {
 							if err = agent.Download(i, tasks[i], nil, true); err != nil {
@@ -135,7 +149,7 @@ func main() {
 					if tasks, err := agent.Dispatch(cmds[1], 2); err == nil {
 						switch len(tasks) {
 						case 0:
-							err = errors.New("No task matches.")
+							err = noTasksMatchesErr
 						case 1:
 							err = agent.DeleteTask(tasks[0])
 						default:
