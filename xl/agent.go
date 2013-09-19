@@ -977,24 +977,19 @@ func (this *Agent) DeleteTask(taskid string) error {
 		return noSuchTaskErr
 	}
 	tids := taskid + ","
-	/*
-	   del_type:
-	   0 normal
-	   1 deleted
-	   3 normal|expired
-	   4 all expired
-	*/
 	var del_type byte
 	var group string
 	if t, _ := this.cache.Pull("normal", taskid); t != nil {
-		del_type = t_normal
-		group = "normal"
+		if t, _ = this.cache.Pull("expired", taskid); t != nil {
+			del_type = t_expired
+			group = "expired"
+		} else {
+			del_type = t_normal
+			group = "normal"
+		}
 	} else if t, _ = this.cache.Pull("deleted", taskid); t != nil {
 		del_type = t_deleted
 		group = "deleted"
-	} else if t, _ = this.cache.Pull("expired", taskid); t != nil {
-		del_type = t_expired
-		group = "expired"
 	} else {
 		return noSuchTaskErr
 	}

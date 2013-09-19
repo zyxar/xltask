@@ -6,15 +6,21 @@ import (
 )
 
 type Cache struct {
-	normal, expired, deleted tcache.Cache
+	normal, expired, deleted *tcache.Cache
 }
 
 func New() *Cache {
-	return &Cache{tcache.New(), tcache.New(), tcache.New()}
+	a := tcache.New()
+	b := tcache.New()
+	c := tcache.New()
+	a.Maintaince()
+	b.Maintaince()
+	c.Maintaince()
+	return &Cache{a, b, c}
 }
 
 func (c *Cache) Push(group string, kv tcache.KeyValue) error {
-	var cache tcache.Cache
+	var cache *tcache.Cache
 	switch group {
 	case "normal":
 		cache = c.normal
@@ -30,7 +36,7 @@ func (c *Cache) Push(group string, kv tcache.KeyValue) error {
 }
 
 func (c *Cache) Pull(group, key string) (interface{}, error) {
-	var cache tcache.Cache
+	var cache *tcache.Cache
 	switch group {
 	case "normal":
 		cache = c.normal
@@ -45,7 +51,7 @@ func (c *Cache) Pull(group, key string) (interface{}, error) {
 }
 
 func (c *Cache) Range(group string) ([]interface{}, error) {
-	var cache tcache.Cache
+	var cache *tcache.Cache
 	switch group {
 	case "normal":
 		cache = c.normal
@@ -60,7 +66,7 @@ func (c *Cache) Range(group string) ([]interface{}, error) {
 }
 
 func (c *Cache) Invalidate(group, key string) error {
-	var cache tcache.Cache
+	var cache *tcache.Cache
 	switch group {
 	case "normal":
 		cache = c.normal
@@ -76,7 +82,7 @@ func (c *Cache) Invalidate(group, key string) error {
 }
 
 func (c *Cache) Rebase(group, key string) (interface{}, error) {
-	var cache tcache.Cache
+	var cache *tcache.Cache
 	switch group {
 	case "normal":
 		cache = c.normal
