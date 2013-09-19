@@ -351,11 +351,11 @@ func (this *Agent) tasklist_nofresh(tid, page int, show bool) error {
 				this.vm[t_expired][ts[i].Id] = &ts[i]
 			}
 		}
+		timestamp = current_timestamp()
 	}
 	if show {
 		printTaskList(this.vm[t_normal])
 	}
-	timestamp = current_timestamp()
 	return nil
 }
 
