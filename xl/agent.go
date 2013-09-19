@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/zyxar/xltask/bt"
 	"github.com/zyxar/xltask/cookiejar"
+	"github.com/zyxar/xltask/gcache"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,7 +27,7 @@ type Agent struct {
 	conn     *http.Client
 	id       string
 	gdriveid string
-	vm       []map[string]*_task
+	cache    *gcache.Cache
 	passrd   PassReader
 	sync.Mutex
 }
@@ -94,10 +95,7 @@ func NewAgent(c Config) *Agent {
 	this := new(Agent)
 	this.conf = c
 	this.conn = &http.Client{nil, nil, cookie}
-	this.vm = make([]map[string]*_task, t_total)
-	this.vm[t_normal] = make(map[string]*_task)  // normal
-	this.vm[t_expired] = make(map[string]*_task) // expired
-	this.vm[t_deleted] = make(map[string]*_task) // deleted
+	this.cache = gcache.New()
 	if c.Boost() {
 		this.init()
 	}
@@ -198,29 +196,28 @@ func (this *Agent) Download(taskid string, filter string, fc Fetcher, echo bool)
 	if fc == nil {
 		fc = DefaultFetcher
 	}
-	task := this.vm[t_normal][taskid]
-	if !AssertTaskId(taskid) || task == nil {
+	task, err := this.cache.Pull("normal", taskid)
+	if err != nil || task == nil {
 		return noSuchTaskErr
 	}
-	var err error
-	switch task.TaskType {
+	switch task.(*_task).TaskType {
 	case _Task_BT:
-		err = this.download_bt(task, filter, fc, echo)
+		err = this.download_bt(task.(*_task), filter, fc, echo)
 	case _Task_NONBT:
 		fallthrough
 	default:
-		if task.DownloadStatus != "2" {
+		if task.(*_task).DownloadStatus != "2" {
 			return taskNotCompletedErr
-		} else if task.expired() {
+		} else if task.(*_task).expired() {
 			return errors.New("Task expired.")
 		}
-		log.Println("Downloading", task.TaskName, "...")
-		err = this.download_(task.LixianURL, task.TaskName, fc, echo)
+		log.Println("Downloading", task.(*_task).TaskName, "...")
+		err = this.download_(task.(*_task).LixianURL, task.(*_task).TaskName, fc, echo)
 	}
 	if err != nil {
 		return err
 	}
-	return verifyTask(task, task.TaskName)
+	return verifyTask(task.(*_task), task.(*_task).TaskName)
 }
 
 func (this *Agent) download_(uri, filename string, fc Fetcher, echo bool) error {
@@ -283,30 +280,38 @@ func (this *Agent) dispatch(pattern string, flag int) ([]*_task, error) {
 	if err != nil {
 		return nil, errors.New("Pattern unrecognised.")
 	}
-	var ret []*_task
+	ret := make([]*_task, 0, 32)
 	switch flag {
 	case t_normal:
-		fallthrough
-	case t_deleted:
-		m := this.vm[flag]
-		ret = make([]*_task, 0, 32)
+		m, _ := this.cache.Range("normal")
 		for i, _ := range m {
-			if expr.MatchString(m[i].TaskName) {
-				ret = append(ret, m[i])
+			if expr.MatchString(m[i].(*_task).TaskName) {
+				ret = append(ret, m[i].(*_task))
+			}
+		}
+	case t_deleted:
+		m, _ := this.cache.Range("deleted")
+		for i, _ := range m {
+			if expr.MatchString(m[i].(*_task).TaskName) {
+				ret = append(ret, m[i].(*_task))
 			}
 		}
 	default:
-		ret = make([]*_task, 0, 32)
-		for i, _ := range this.vm[t_normal] {
-			if expr.MatchString(this.vm[t_normal][i].TaskName) {
-				ret = append(ret, this.vm[t_normal][i])
+		m, _ := this.cache.Range("normal")
+		for i, _ := range m {
+			if expr.MatchString(m[i].(*_task).TaskName) {
+				ret = append(ret, m[i].(*_task))
 			}
 		}
-		for i, _ := range this.vm[t_deleted] {
-			if expr.MatchString(this.vm[t_deleted][i].TaskName) {
-				ret = append(ret, this.vm[t_deleted][i])
+		m, _ = this.cache.Range("deleted")
+		for i, _ := range m {
+			if expr.MatchString(m[i].(*_task).TaskName) {
+				ret = append(ret, m[i].(*_task))
 			}
 		}
+	}
+	if len(ret) == 0 {
+		return nil, noSuchTaskErr
 	}
 	return ret, nil
 }
@@ -346,15 +351,16 @@ func (this *Agent) tasklist_nofresh(tid, page int, show bool) error {
 		}
 		ts := resp.Info.Tasks
 		for i, _ := range ts {
-			this.vm[t_normal][ts[i].Id] = &ts[i]
+			this.cache.Push("normal", &ts[i])
 			if ts[i].expired() {
-				this.vm[t_expired][ts[i].Id] = &ts[i]
+				this.cache.Push("expired", &ts[i])
 			}
 		}
 		timestamp = current_timestamp()
 	}
 	if show {
-		printTaskList(this.vm[t_normal])
+		m, _ := this.cache.Range("normal")
+		printTaskList(m)
 	}
 	return nil
 }
@@ -384,10 +390,11 @@ func (this *Agent) ShowExpiredTasks(show bool) error {
 	r, err := this.readExpired()
 	ts, _ := parseHistory(r)
 	for i, _ := range ts {
-		this.vm[t_expired][ts[i].Id] = ts[i]
+		this.cache.Push("expired", ts[i])
 	}
 	if show {
-		printTaskList(this.vm[t_expired])
+		m, _ := this.cache.Range("expired")
+		printTaskList(m)
 	}
 	return err
 }
@@ -430,11 +437,12 @@ func (this *Agent) ShowDeletedTasks(show bool) error {
 		r, err = this.readHistory(j)
 		ts, next = parseHistory(r)
 		for i, _ := range ts {
-			this.vm[t_deleted][ts[i].Id] = ts[i]
+			this.cache.Push("deleted", ts[i])
 		}
 	}
 	if show {
-		printTaskList(this.vm[t_deleted])
+		m, _ := this.cache.Range("deleted")
+		printTaskList(m)
 	}
 	return err
 }
@@ -484,19 +492,16 @@ func (this *Agent) InfoTasks(id interface{}) {
 			if !AssertTaskId(ids[i]) {
 				continue
 			}
-			task := this.vm[t_normal][ids[i]]
+			task, _ := this.cache.Pull("normal", ids[i])
 			if task == nil {
-				task = this.vm[t_expired][ids[i]]
-			}
-			if task == nil {
-				task = this.vm[t_deleted][ids[i]]
+				task, _ = this.cache.Pull("deleted", ids[i])
 			}
 			if task == nil {
 				continue
 			}
-			fmt.Printf("%s\n", task.Repr())
-			if task.TaskType == _Task_BT {
-				_, err := this.FillBtList(task.Id)
+			fmt.Printf("%s\n", task.(*_task).Repr())
+			if task.(*_task).TaskType == _Task_BT {
+				_, err := this.FillBtList(task.(*_task).Id)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -507,19 +512,16 @@ func (this *Agent) InfoTasks(id interface{}) {
 			if !AssertTaskId(ids[i]) {
 				continue
 			}
-			task := this.vm[t_normal][ids[i]]
+			task, _ := this.cache.Pull("normal", ids[i])
 			if task == nil {
-				task = this.vm[t_expired][ids[i]]
-			}
-			if task == nil {
-				task = this.vm[t_deleted][ids[i]]
+				task, _ = this.cache.Pull("deleted", ids[i])
 			}
 			if task == nil {
 				continue
 			}
-			fmt.Printf("%s\n", task.Repr())
-			if task.TaskType == _Task_BT {
-				_, err := this.FillBtList(task.Id)
+			fmt.Printf("%s\n", task.(*_task).Repr())
+			if task.(*_task).TaskType == _Task_BT {
+				_, err := this.FillBtList(task.(*_task).Id)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -789,22 +791,23 @@ func (this *Agent) getReferer() string {
 func (this *Agent) ProcessTask() error {
 	uri := fmt.Sprintf(TASKPROCESS_URL, current_timestamp(), current_timestamp())
 	v := url.Values{}
-	l := len(this.vm[t_normal])
+	m, _ := this.cache.Range("normal")
+	l := len(m)
+	if l == 0 {
+		return errors.New("No tasks in local cache.")
+	}
 	list := make([]string, 0, l)
 	nm_list := make([]string, 0, l)
 	bt_list := make([]string, 0, l)
-	for i, _ := range this.vm[t_normal] {
-		if this.vm[t_normal][i].DownloadStatus == "1" {
-			list = append(list, i)
-			if this.vm[t_normal][i].TaskType == _Task_BT {
-				bt_list = append(bt_list, i)
+	for i, _ := range m {
+		if m[i].(*_task).DownloadStatus == "1" {
+			list = append(list, m[i].(*_task).Id)
+			if m[i].(*_task).TaskType == _Task_BT {
+				bt_list = append(bt_list, m[i].(*_task).Id)
 			} else {
-				nm_list = append(nm_list, i)
+				nm_list = append(nm_list, m[i].(*_task).Id)
 			}
 		}
-	}
-	if len(list) == 0 {
-		return errors.New("Local task list empty.")
 	}
 	v.Add("list", strings.Join(list, ","))
 	v.Add("nm_list", strings.Join(nm_list, ","))
@@ -861,14 +864,11 @@ func (this *Agent) PauseTasks(ids []string) error {
 }
 
 func (this *Agent) getTaskById(taskid string) *_task {
-	task := this.vm[t_normal][taskid]
+	task, _ := this.cache.Pull("normal", taskid)
 	if task == nil {
-		task = this.vm[t_expired][taskid]
+		task, _ = this.cache.Pull("deleted", taskid)
 	}
-	if task == nil {
-		task = this.vm[t_deleted][taskid]
-	}
-	return task
+	return task.(*_task)
 }
 
 func (this *Agent) RenameTask(taskid, newname string) error {
@@ -927,15 +927,15 @@ func (this *Agent) DeleteTasks(ids []string) error {
 	j := 0
 	for i, _ := range ids {
 		// aggressively delete cache
-		if this.vm[t_deleted][ids[i]] != nil {
+		if t, _ := this.cache.Pull("deleted", ids[i]); t != nil {
 			deleted = true
-			delete(this.vm[t_deleted], ids[i])
-		} else if this.vm[t_expired][ids[i]] != nil {
+			this.cache.Invalidate("deleted", ids[i])
+		} else if t, _ = this.cache.Pull("expired", ids[i]); t != nil {
 			expired = true
-			delete(this.vm[t_expired], ids[i])
-		} else if this.vm[t_normal][ids[i]] != nil {
+			this.cache.Invalidate("expired", ids[i])
+		} else if t, _ = this.cache.Pull("normal", ids[i]); t != nil {
 			normal = true
-			delete(this.vm[t_normal], ids[i])
+			this.cache.Invalidate("normal", ids[i])
 		} else {
 			continue
 		}
@@ -985,12 +985,16 @@ func (this *Agent) DeleteTask(taskid string) error {
 	   4 all expired
 	*/
 	var del_type byte
-	if this.vm[t_normal][taskid] != nil {
+	var group string
+	if t, _ := this.cache.Pull("normal", taskid); t != nil {
 		del_type = t_normal
-	} else if this.vm[t_deleted][taskid] != nil {
+		group = "normal"
+	} else if t, _ = this.cache.Pull("deleted", taskid); t != nil {
 		del_type = t_deleted
-	} else if this.vm[t_expired][taskid] != nil {
+		group = "deleted"
+	} else if t, _ = this.cache.Pull("expired", taskid); t != nil {
 		del_type = t_expired
+		group = "expired"
 	} else {
 		return noSuchTaskErr
 	}
@@ -1005,7 +1009,7 @@ func (this *Agent) DeleteTask(taskid string) error {
 	}
 	if ok, _ := regexp.Match(`\{"result":1,"type":`, r); ok {
 		log.Printf("%s\n", r)
-		delete(this.vm[del_type], taskid)
+		this.cache.Invalidate(group, taskid)
 		return nil
 	}
 	return unexpectedErr
@@ -1017,12 +1021,16 @@ func (this *Agent) PurgeTask(taskid string) error {
 	}
 	tids := taskid + ","
 	var del_type byte
-	if this.vm[t_expired][taskid] != nil {
+	var group string
+	if t, _ := this.cache.Pull("expired", taskid); t != nil {
 		del_type = t_expired
-	} else if this.vm[t_deleted][taskid] != nil {
+		group = "expired"
+	} else if t, _ = this.cache.Pull("deleted", taskid); t != nil {
 		del_type = t_deleted
+		group = "deleted"
 	} else {
 		del_type = t_normal
+		group = "normal"
 	}
 	uri := fmt.Sprintf(TASKDELETE_URL, current_timestamp(), del_type, current_timestamp())
 	data := url.Values{}
@@ -1035,7 +1043,7 @@ func (this *Agent) PurgeTask(taskid string) error {
 	}
 	if ok, _ := regexp.Match(`\{"result":1,"type":`, r); ok {
 		log.Printf("%s\n", r)
-		delete(this.vm[del_type], taskid)
+		this.cache.Invalidate(group, taskid)
 		if del_type != t_deleted {
 			uri = fmt.Sprintf(TASKDELETE_URL, current_timestamp(), t_deleted, current_timestamp())
 			data = url.Values{}

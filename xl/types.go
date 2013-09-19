@@ -65,6 +65,14 @@ type _task struct {
 	UserType string `json:"user_type"`
 }
 
+func (t *_task) Key() string {
+	return t.Id
+}
+
+func (t *_task) Value() interface{} {
+	return t
+}
+
 type _user struct {
 	ExpireDate          string `json:"expire_date"`
 	MaxTaskNum          string `json:"max_task_num"`

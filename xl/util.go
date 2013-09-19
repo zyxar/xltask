@@ -158,11 +158,11 @@ func trim(raw string) string {
 	return s[2]
 }
 
-func printTaskList(ts map[string]*_task) {
+func printTaskList(ts []interface{}) {
 	j := 0
 	for i, _ := range ts {
 		j++
-		fmt.Printf("#%d %v\n", j, ts[i])
+		fmt.Printf("#%d %v\n", j, ts[i].(*_task))
 	}
 }
 
