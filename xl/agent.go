@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zyxar/xltask/bt"
+	"github.com/zyxar/taipei"
 	"github.com/zyxar/xltask/cookiejar"
 	"github.com/zyxar/xltask/gcache"
 	"io"
@@ -714,7 +714,7 @@ func (this *Agent) addTorrentTask(filename string) (err error) {
 		return
 	}
 	defer file.Close()
-	if _, err = bt.GetMetaInfo(filename); err != nil {
+	if _, err = taipei.GetMetaInfo(filename); err != nil {
 		return
 	}
 	body := &bytes.Buffer{}

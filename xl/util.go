@@ -161,8 +161,10 @@ func trim(raw string) string {
 func printTaskList(ts []interface{}) {
 	j := 0
 	for i, _ := range ts {
-		j++
-		fmt.Printf("#%d %v\n", j, ts[i].(*_task))
+		if ts[i] != nil {
+			j++
+			fmt.Printf("#%d %v\n", j, ts[i].(*_task))
+		}
 	}
 }
 
