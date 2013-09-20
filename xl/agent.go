@@ -217,7 +217,7 @@ func (this *Agent) Download(taskid string, filter string, fc Fetcher, echo bool)
 	if err != nil {
 		return err
 	}
-	return verifyTask(task.(*_task), task.(*_task).TaskName)
+	return this.verifyTask(task.(*_task), task.(*_task).TaskName)
 }
 
 func (this *Agent) download_(uri, filename string, fc Fetcher, echo bool) error {

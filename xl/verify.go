@@ -3,17 +3,21 @@ package xl
 import (
 	"bufio"
 	"fmt"
+	"github.com/zyxar/taipei"
 	"github.com/zyxar/xltask/ed2k"
+	"io/ioutil"
 	"os"
 	"strings"
 )
 
-func verifyTask(task *_task, filename string) error {
+func (this *Agent) verifyTask(task *_task, filename string) error {
 	switch task.URL[:4] {
 	case "ed2k":
+		fmt.Println("Verifying [ED2K]", filename)
 		return verify_ed2k(task, filename)
 	case "bt:/":
-		return verify_bt(task, filename)
+		fmt.Println("Verifying [BT]", filename)
+		return this.verify_bt(task, filename)
 	}
 	return nil
 }
@@ -29,7 +33,20 @@ func verify_ed2k(task *_task, filename string) error {
 	return nil
 }
 
-func verify_bt(task *_task, filename string) error {
+func (this *Agent) verify_bt(task *_task, filename string) error {
+	tmp_torrent, err := ioutil.TempFile("", "xltorrent")
+	if err != nil {
+		return err
+	}
+	this.GetTorrentByHash(task.Cid, tmp_torrent.Name())
+	m, err := taipei.GetMetaInfo(tmp_torrent.Name())
+	if err != nil {
+		return err
+	}
+	g, err := taipei.VerifyContent(m, filename)
+	if g == false {
+		return err
+	}
 	return nil
 }
 
