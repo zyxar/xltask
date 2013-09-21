@@ -191,7 +191,11 @@ func main() {
 					err = insufficientArgErr
 				}
 			case "restart":
-				// restart paused tasks
+				if len(cmds) > 1 {
+					err = agent.RestartTasks(cmds[1])
+				} else {
+					err = insufficientArgErr
+				}
 			case "rename":
 				fallthrough
 			case "mv":

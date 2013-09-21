@@ -251,8 +251,9 @@ func (this *Agent) download_bt(task *_task, filter string, fc Fetcher, echo bool
 }
 
 func (this *Agent) Dispatch(pattern string, flag int) ([]string, error) {
-	if ok, _ := regexp.MatchString(`^\d{7,}$`, pattern); ok {
-		return []string{pattern}, nil
+	if t, err := this.dispatchId(pattern, flag); err == nil {
+		fmt.Printf("#1 %s\n", t)
+		return []string{t.Id}, nil
 	}
 	var ids []string
 	if tasks, err := this.dispatch(`(?i)`+pattern, flag); err != nil {
@@ -267,6 +268,26 @@ func (this *Agent) Dispatch(pattern string, flag int) ([]string, error) {
 	return ids, nil
 }
 
+func (this *Agent) dispatchId(taskid string, flag int) (*_task, error) {
+	var t interface{}
+	if ok, _ := regexp.MatchString(`^\d{7,}$`, taskid); ok {
+		if flag == t_normal {
+			t, _ = this.cache.Pull("normal", taskid)
+		} else if flag == t_deleted {
+			t, _ = this.cache.Pull("deleted", taskid)
+		} else {
+			t, _ = this.cache.Pull("normal", taskid)
+			if t == nil {
+				t, _ = this.cache.Pull("deleted", taskid)
+			}
+		}
+	}
+	if t == nil {
+		return nil, noSuchTaskErr
+	}
+	return t.(*_task), nil
+}
+
 func (this *Agent) dispatch(pattern string, flag int) ([]*_task, error) {
 	/*
 	   flag:
@@ -275,6 +296,9 @@ func (this *Agent) dispatch(pattern string, flag int) ([]*_task, error) {
 	*/
 	if flag < 0 || flag >= t_total {
 		return nil, errors.New("Invalid task flag.")
+	}
+	if t, err := this.dispatchId(pattern, flag); err == nil {
+		return []*_task{t}, nil
 	}
 	expr, err := regexp.Compile(pattern)
 	if err != nil {
@@ -482,6 +506,50 @@ func (this *Agent) DelayTask(taskid string) error {
 	}
 	json.Unmarshal(s[1], &resp)
 	log.Printf("%s: %s\n", taskid, resp.K.Llt)
+	return nil
+}
+
+func (this *Agent) RestartTasks(pattern string) error {
+	ts, err := this.dispatch(pattern, 0)
+	if err != nil {
+		return err
+	}
+	return this.redownload(ts)
+}
+
+func (this *Agent) redownload(tasks []*_task) error {
+	form := make([]string, 0, len(tasks)+2)
+	k := 0
+	for i, _ := range tasks {
+		status := tasks[i].DownloadStatus
+		if status != "5" && status != "3" {
+			continue // only valid for `pending` and `failed` tasks
+		}
+		if tasks[i].expired() {
+			continue
+		}
+		if status == "3" {
+			k++
+		}
+		v := url.Values{}
+		v.Add("id[]", tasks[i].Id)
+		v.Add("url[]", tasks[i].URL)
+		v.Add("cid[]", tasks[i].Cid)
+		v.Add("download_status[]", status)
+		v.Add("taskname[]", tasks[i].TaskName)
+		form = append(form, v.Encode())
+	}
+	if len(form) == 0 {
+		return errors.New("No tasks need to restart.")
+	}
+	form = append(form, "type=1")
+	form = append(form, "interfrom=task")
+	uri := fmt.Sprintf(REDOWNLOAD_URL, current_timestamp())
+	r, err := this.post(uri, strings.Join(form, "&"))
+	if err != nil {
+		return err
+	}
+	log.Printf("%s\n", r)
 	return nil
 }
 
@@ -867,6 +935,9 @@ func (this *Agent) getTaskById(taskid string) *_task {
 	task, _ := this.cache.Pull("normal", taskid)
 	if task == nil {
 		task, _ = this.cache.Pull("deleted", taskid)
+	}
+	if task == nil {
+		return nil
 	}
 	return task.(*_task)
 }
