@@ -43,7 +43,9 @@ func (this *Agent) verify_bt(task *_task, filename string) error {
 	if err != nil {
 		return err
 	}
+	taipei.SetEcho(true)
 	g, err := taipei.VerifyContent(m, filename)
+	taipei.SetEcho(false)
 	if g == false {
 		return err
 	}
