@@ -234,10 +234,11 @@ func (this *Agent) download_bt(task *_task, filter string, fc Fetcher, echo bool
 	}
 	rlist := btlist.Record
 	for i, _ := range rlist {
-		// TODO: make filename safe
-		if ok, _ := regexp.MatchString(`(?i)`+filter, rlist[i].FileName); ok && rlist[i].Status == "2" {
-			log.Println("Downloading", rlist[i].FileName, "...")
-			err = this.download_(rlist[i].DownURL, path.Join(task.TaskName, rlist[i].FileName), fc, echo)
+		exp := regexp.MustCompile(`\\`)
+		filename := exp.ReplaceAllLiteralString(rlist[i].FileName, `/`)
+		if ok, _ := regexp.MatchString(`(?i)`+filter, filename); ok && rlist[i].Status == "2" {
+			log.Println("Downloading", filename, "...")
+			err = this.download_(rlist[i].DownURL, path.Join(task.TaskName, filename), fc, echo)
 			if err != nil {
 				return err
 			}
