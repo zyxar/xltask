@@ -1,6 +1,8 @@
 XL Task
 =========
 
+(Now deprecated; see new [repo](https://github.com/matzoe/xunlei))
+
 Xunlei lixian download utility (Library, Daemon & Cmd) implemented in Go
 
 [![Build Status](https://travis-ci.org/zyxar/xltask.png?branch=master)](https://travis-ci.org/zyxar/xltask)
